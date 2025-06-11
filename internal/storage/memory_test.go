@@ -14,8 +14,9 @@ func TestNewMemoryStorage(t *testing.T) {
 	storage := NewMemoryStorage(1000)
 
 	assert.NotNil(t, storage)
-	assert.NotNil(t, storage.tasks)
+	assert.NotNil(t, storage.shards)
 	assert.Equal(t, 1000, storage.maxTasks)
+	assert.True(t, storage.shardCount > 0)
 
 	// Test with zero maxTasks - should use default
 	storage2 := NewMemoryStorage(0)
@@ -335,7 +336,7 @@ func TestMemoryStorage_Clear(t *testing.T) {
 	assert.Equal(t, 0, count)
 
 	// Verify maxTasks is preserved
-	assert.Equal(t, 1000, storage.maxTasks)
+	assert.Equal(t, 1000, storage.GetMaxTasks())
 }
 
 func TestMemoryStorage_HealthCheck(t *testing.T) {
@@ -345,8 +346,8 @@ func TestMemoryStorage_HealthCheck(t *testing.T) {
 	err := storage.HealthCheck()
 	assert.NoError(t, err)
 
-	// Nil map should fail health check
-	storage.tasks = nil
+	// Nil shards should fail health check
+	storage.shards = nil
 	err = storage.HealthCheck()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not properly initialized")
@@ -375,7 +376,7 @@ func TestMemoryStorage_GetStats(t *testing.T) {
 	assert.Equal(t, 3, stats.IncompleteTasks)
 	assert.Equal(t, 2, stats.CompletedTasks)
 	assert.Equal(t, 0, stats.LastID)
-	assert.Equal(t, "memory", stats.StorageType)
+	assert.Equal(t, "sharded_memory", stats.StorageType)
 }
 
 func TestMemoryStorage_GetTasksByStatus(t *testing.T) {
@@ -629,6 +630,9 @@ func TestMemoryStorage_LimitReached(t *testing.T) {
 	assert.Equal(t, 2, usage["max_tasks"])
 	assert.Equal(t, float64(100), usage["usage_percent"])
 	assert.Equal(t, 0, usage["available"])
+	assert.Contains(t, usage, "shard_count")
+	assert.Contains(t, usage, "shard_distribution")
+	assert.Equal(t, "sharded_memory", usage["storage_type"])
 
 	// Delete one task and check usage again
 	err = storage.Delete(task1.ID)
@@ -639,6 +643,8 @@ func TestMemoryStorage_LimitReached(t *testing.T) {
 	assert.Equal(t, 2, usage["max_tasks"])
 	assert.Equal(t, float64(50), usage["usage_percent"])
 	assert.Equal(t, 1, usage["available"])
+	assert.Contains(t, usage, "shard_count")
+	assert.Contains(t, usage, "shard_distribution")
 }
 
 // TestMemoryStorage_GetMaxTasks tests the GetMaxTasks method
@@ -664,6 +670,9 @@ func TestMemoryStorage_GetUsage(t *testing.T) {
 	assert.Equal(t, 10, usage["max_tasks"])
 	assert.Equal(t, float64(0), usage["usage_percent"])
 	assert.Equal(t, 10, usage["available"])
+	assert.Contains(t, usage, "shard_count")
+	assert.Contains(t, usage, "shard_distribution")
+	assert.Equal(t, "sharded_memory", usage["storage_type"])
 
 	// Add 3 tasks
 	for i := 0; i < 3; i++ {
@@ -676,6 +685,9 @@ func TestMemoryStorage_GetUsage(t *testing.T) {
 	assert.Equal(t, 10, usage["max_tasks"])
 	assert.Equal(t, float64(30), usage["usage_percent"])
 	assert.Equal(t, 7, usage["available"])
+	assert.Contains(t, usage, "shard_count")
+	assert.Contains(t, usage, "shard_distribution")
+	assert.Equal(t, "sharded_memory", usage["storage_type"])
 }
 
 func BenchmarkMemoryStorage_GetByID(b *testing.B) {
