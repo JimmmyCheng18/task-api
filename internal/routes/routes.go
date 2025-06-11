@@ -4,6 +4,7 @@ import (
 	"task-api/internal/handlers"
 	"task-api/internal/interfaces"
 	"task-api/internal/middleware"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -12,13 +13,15 @@ import (
 
 // RouterConfig defines configuration for the router
 type RouterConfig struct {
-	EnableCORS      bool     `json:"enable_cors"`       // Enable CORS middleware
-	EnableLogging   bool     `json:"enable_logging"`    // Enable request logging
-	EnableSecurity  bool     `json:"enable_security"`   // Enable security headers
-	EnableRequestID bool     `json:"enable_request_id"` // Enable request ID generation
-	TrustedProxies  []string `json:"trusted_proxies"`   // Trusted proxy IPs
-	AllowedOrigins  []string `json:"allowed_origins"`   // CORS allowed origins
-	DevelopmentMode bool     `json:"development_mode"`  // Development mode flag
+	EnableCORS      bool                       `json:"enable_cors"`       // Enable CORS middleware
+	EnableLogging   bool                       `json:"enable_logging"`    // Enable request logging
+	EnableSecurity  bool                       `json:"enable_security"`   // Enable security headers
+	EnableRequestID bool                       `json:"enable_request_id"` // Enable request ID generation
+	EnableRateLimit bool                       `json:"enable_rate_limit"` // Enable rate limiting
+	TrustedProxies  []string                   `json:"trusted_proxies"`   // Trusted proxy IPs
+	AllowedOrigins  []string                   `json:"allowed_origins"`   // CORS allowed origins
+	DevelopmentMode bool                       `json:"development_mode"`  // Development mode flag
+	RateLimitConfig middleware.RateLimitConfig `json:"rate_limit_config"` // Rate limiting configuration
 }
 
 // SetupRouterWithConfig configures and returns a Gin router with custom configuration
@@ -59,6 +62,18 @@ func SetupRouterWithConfig(storage interfaces.TaskStorage, config RouterConfig) 
 			router.Use(middleware.RestrictiveCORS(config.AllowedOrigins))
 		} else {
 			router.Use(middleware.CORS())
+		}
+	}
+
+	// Rate limiting middleware (before logging to avoid logging blocked requests)
+	if config.EnableRateLimit {
+		if config.DevelopmentMode {
+			// More lenient rate limiting for development
+			devConfig := config.RateLimitConfig
+			devConfig.PerIP = devConfig.PerIP * 2
+			router.Use(middleware.SmartRateLimit(devConfig))
+		} else {
+			router.Use(middleware.SmartRateLimit(config.RateLimitConfig))
 		}
 	}
 
@@ -140,36 +155,6 @@ func setupAPIRoutes(router *gin.Engine, storage interfaces.TaskStorage) {
 	})
 }
 
-// SetupDevelopmentRouter creates a router with development-friendly settings
-func SetupDevelopmentRouter(storage interfaces.TaskStorage) *gin.Engine {
-	config := RouterConfig{
-		EnableCORS:      true,
-		EnableLogging:   true,
-		EnableSecurity:  false, // Disable for easier debugging
-		EnableRequestID: true,
-		TrustedProxies:  []string{"127.0.0.1", "::1"},
-		AllowedOrigins:  []string{"*"},
-		DevelopmentMode: true,
-	}
-
-	return SetupRouterWithConfig(storage, config)
-}
-
-// SetupProductionRouter creates a router with production-ready settings
-func SetupProductionRouter(storage interfaces.TaskStorage, allowedOrigins []string) *gin.Engine {
-	config := RouterConfig{
-		EnableCORS:      true,
-		EnableLogging:   true,
-		EnableSecurity:  true,
-		EnableRequestID: true,
-		TrustedProxies:  []string{"127.0.0.1"},
-		AllowedOrigins:  allowedOrigins,
-		DevelopmentMode: false,
-	}
-
-	return SetupRouterWithConfig(storage, config)
-}
-
 // SetupTestRouter creates a router suitable for testing
 func SetupTestRouter(storage interfaces.TaskStorage) *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -179,9 +164,69 @@ func SetupTestRouter(storage interfaces.TaskStorage) *gin.Engine {
 		EnableLogging:   false, // Disable logging for cleaner test output
 		EnableSecurity:  false, // Disable security headers for testing
 		EnableRequestID: false, // Disable request ID for predictable tests
+		EnableRateLimit: false, // Disable rate limiting for testing
 		TrustedProxies:  []string{},
 		AllowedOrigins:  []string{},
 		DevelopmentMode: false,
+		RateLimitConfig: middleware.DefaultRateLimitConfig(),
+	}
+
+	return SetupRouterWithConfig(storage, config)
+}
+
+// ConfigInterface defines the interface for app configuration
+type ConfigInterface interface {
+	GetRateLimitEnabled() bool
+	GetRateLimitPerIP() int
+	GetRateLimitPerAPIKey() int
+	GetRateLimitCleanupTime() int
+}
+
+// SetupDevelopmentRouterWithConfig creates a router with development-friendly settings using app config
+func SetupDevelopmentRouterWithConfig(storage interfaces.TaskStorage, appConfig ConfigInterface) *gin.Engine {
+	rateLimitConfig := middleware.RateLimitConfig{
+		Enabled:         appConfig.GetRateLimitEnabled(),
+		PerIP:           appConfig.GetRateLimitPerIP() * 2, // More lenient for development
+		PerAPIKey:       appConfig.GetRateLimitPerAPIKey() * 2,
+		CleanupInterval: time.Duration(appConfig.GetRateLimitCleanupTime()) * time.Minute,
+		WindowSize:      1 * time.Minute,
+	}
+
+	config := RouterConfig{
+		EnableCORS:      true,
+		EnableLogging:   true,
+		EnableSecurity:  false, // Disable for easier debugging
+		EnableRequestID: true,
+		EnableRateLimit: true,
+		TrustedProxies:  []string{"127.0.0.1", "::1"},
+		AllowedOrigins:  []string{"*"},
+		DevelopmentMode: true,
+		RateLimitConfig: rateLimitConfig,
+	}
+
+	return SetupRouterWithConfig(storage, config)
+}
+
+// SetupProductionRouterWithConfig creates a router with production-ready settings using app config
+func SetupProductionRouterWithConfig(storage interfaces.TaskStorage, allowedOrigins []string, appConfig ConfigInterface) *gin.Engine {
+	rateLimitConfig := middleware.RateLimitConfig{
+		Enabled:         appConfig.GetRateLimitEnabled(),
+		PerIP:           appConfig.GetRateLimitPerIP(),
+		PerAPIKey:       appConfig.GetRateLimitPerAPIKey(),
+		CleanupInterval: time.Duration(appConfig.GetRateLimitCleanupTime()) * time.Minute,
+		WindowSize:      1 * time.Minute,
+	}
+
+	config := RouterConfig{
+		EnableCORS:      true,
+		EnableLogging:   true,
+		EnableSecurity:  true,
+		EnableRequestID: true,
+		EnableRateLimit: true,
+		TrustedProxies:  []string{"127.0.0.1"},
+		AllowedOrigins:  allowedOrigins,
+		DevelopmentMode: false,
+		RateLimitConfig: rateLimitConfig,
 	}
 
 	return SetupRouterWithConfig(storage, config)
@@ -206,6 +251,14 @@ func SetupMetricsEndpoint(router *gin.Engine, storage interfaces.TaskStorage) {
 
 		c.JSON(200, gin.H{
 			"metrics": metrics,
+		})
+	})
+
+	// Add rate limit stats endpoint
+	router.GET("/metrics/rate-limit", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Rate limit statistics endpoint",
+			"note":    "Rate limit statistics are handled by middleware and would need middleware reference to display",
 		})
 	})
 }
