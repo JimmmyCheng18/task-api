@@ -367,7 +367,54 @@ docker run --rm -p 3000:9000 \
   task-api:latest
 ```
 
-## 📦 Project Structure Principles
+
+## 🐳 Docker Compose
+
+This project supports running both frontend and backend services together using Docker Compose for a complete development and production environment.
+
+### Services
+
+- **Backend API Service** (`task-api-backend`)
+  - Port: `3333:8080`
+  - Health check endpoint: `/health`
+  - Environment: Production mode (`GIN_MODE=release`)
+
+- **Frontend Service** (`task-frontend`)
+  - Port: `3666:80`
+  - Serves static files via Nginx
+  - Depends on backend service health
+
+- **Network**
+  - Custom bridge network: `task-management-network`
+  - Services communicate via container names
+
+### Quick Start
+
+Run all services with one command:
+
+```bash
+make compose-deploy
+```
+
+This will build images, start services, and display access URLs:
+
+- Frontend: http://localhost:3666
+- Backend API: http://localhost:3333
+- API Docs: http://localhost:3333/swagger/index.html
+
+### Common Commands
+
+```bash
+make compose-build    # Build all service images
+make compose-up       # Start all services
+make compose-down     # Stop all services
+make compose-restart  # Restart all services
+make compose-logs     # View logs
+make compose-status   # Check service status
+```
+
+For detailed troubleshooting and advanced usage, refer to the `docker-compose.yml` file and project documentation.
+## � Project Structure Principles
 
 ### Clean Architecture
 - **Separation of Concerns**: Each layer has a single responsibility
@@ -388,7 +435,7 @@ docker run --rm -p 3000:9000 \
 - Proper documentation
 - Security best practices
 
-## 🛠️ Development Workflow
+## �️ Development Workflow
 
 1. **Feature Development**
    ```bash
