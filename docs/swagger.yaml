@@ -1,0 +1,394 @@
+basePath: /api/v1
+definitions:
+  models.CreateTaskRequest:
+    properties:
+      name:
+        description: Task name (required)
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.TaskStatus'
+        description: Task status (optional, defaults to incomplete)
+    required:
+    - name
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        description: Detailed error information
+        type: string
+      message:
+        description: Error message
+        type: string
+      success:
+        description: Always false
+        type: boolean
+    type: object
+  models.HealthResponse:
+    properties:
+      status:
+        description: Service status
+        type: string
+      timestamp:
+        description: Check timestamp
+        type: string
+      version:
+        description: Service version
+        type: string
+    type: object
+  models.Task:
+    properties:
+      created_at:
+        description: Creation time
+        type: string
+      id:
+        description: Unique identifier
+        type: string
+      name:
+        description: Task name (required)
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.TaskStatus'
+        description: Task status
+      updated_at:
+        description: Last update time
+        type: string
+    required:
+    - name
+    type: object
+  models.TaskListResponse:
+    properties:
+      count:
+        description: Total number of tasks
+        type: integer
+      data:
+        description: Task list
+        items:
+          $ref: '#/definitions/models.Task'
+        type: array
+      success:
+        description: Whether the operation was successful
+        type: boolean
+    type: object
+  models.TaskResponse:
+    properties:
+      data:
+        allOf:
+        - $ref: '#/definitions/models.Task'
+        description: Task data
+      message:
+        description: Response message
+        type: string
+      success:
+        description: Whether the operation was successful
+        type: boolean
+    type: object
+  models.TaskStatus:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-varnames:
+    - TaskIncomplete
+    - TaskCompleted
+  models.UpdateTaskRequest:
+    properties:
+      name:
+        description: Task name (optional)
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.TaskStatus'
+        description: Task status (optional)
+    type: object
+  storage.StorageStats:
+    properties:
+      completed_tasks:
+        description: Number of completed tasks
+        type: integer
+      incomplete_tasks:
+        description: Number of incomplete tasks
+        type: integer
+      last_id:
+        description: Last generated ID
+        type: integer
+      storage_type:
+        description: Type of storage (memory, database, etc.)
+        type: string
+      total_tasks:
+        description: Total number of tasks
+        type: integer
+    type: object
+info:
+  contact:
+    email: support@example.com
+    name: Task API Support
+    url: http://www.example.com/support
+  description: |-
+    A modern, well-structured REST API for task management built with Go and Gin framework.
+    This API provides comprehensive task management functionality with support for CRUD operations,
+    status filtering, pagination, and more.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Task API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Check if the service is healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HealthResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Health check
+      tags:
+      - health
+  /stats:
+    get:
+      consumes:
+      - application/json
+      description: Get statistics about the storage
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.StorageStats'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get storage statistics
+      tags:
+      - stats
+  /tasks:
+    get:
+      consumes:
+      - application/json
+      description: Get all tasks from the storage
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TaskListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all tasks
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Create a new task with the provided data
+      parameters:
+      - description: Task data
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new task
+      tags:
+      - tasks
+  /tasks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a task by its ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a task
+      tags:
+      - tasks
+    get:
+      consumes:
+      - application/json
+      description: Get a specific task by its ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TaskResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a task by ID
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: Update an existing task with the provided data
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Task update data
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a task
+      tags:
+      - tasks
+  /tasks/paginated:
+    get:
+      consumes:
+      - application/json
+      description: Get tasks with pagination support
+      parameters:
+      - description: 'Offset for pagination (default: 0)'
+        in: query
+        name: offset
+        type: integer
+      - description: 'Limit for pagination (default: 10)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TaskListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get tasks with pagination
+      tags:
+      - tasks
+  /tasks/status/{status}:
+    get:
+      consumes:
+      - application/json
+      description: Get all tasks with a specific status
+      parameters:
+      - description: Task Status (0=incomplete, 1=completed)
+        in: path
+        name: status
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TaskListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get tasks by status
+      tags:
+      - tasks
+schemes:
+- http
+- https
+swagger: "2.0"
+tags:
+- description: Task management operations
+  name: tasks
+- description: Health check and monitoring endpoints
+  name: health
+- description: Statistics and metrics endpoints
+  name: stats
