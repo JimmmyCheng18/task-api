@@ -124,7 +124,8 @@ func TestTaskHandler_GetAllTasks(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear storage and setup test data
-			handler.storage.Clear()
+			// Clear storage for test setup (ignore error in test context)
+			_ = handler.storage.Clear()
 			tt.setupTasks()
 
 			// Make request

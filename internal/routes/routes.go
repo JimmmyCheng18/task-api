@@ -38,7 +38,8 @@ func SetupRouterWithConfig(storage interfaces.TaskStorage, config RouterConfig) 
 
 	// Set trusted proxies
 	if len(config.TrustedProxies) > 0 {
-		router.SetTrustedProxies(config.TrustedProxies)
+		// Set trusted proxies and ignore error for router configuration
+		_ = router.SetTrustedProxies(config.TrustedProxies)
 	}
 
 	// Recovery middleware (always enabled)
