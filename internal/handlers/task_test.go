@@ -45,15 +45,44 @@ func setupTestHandler() (*TaskHandler, *gin.Engine) {
 	return handler, router
 }
 
+// setupBenchmarkHandler creates a handler with larger storage limit for benchmarks
+func setupBenchmarkHandler() (*TaskHandler, *gin.Engine) {
+	// Create memory storage with much larger limit for benchmarks
+	memStorage := storage.NewMemoryStorage(100000)
+
+	// Create handler
+	handler := NewTaskHandler(memStorage)
+
+	// Setup Gin in test mode
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Register routes
+	api := router.Group("/api/v1")
+	{
+		api.GET("/tasks", handler.GetAllTasks)
+		api.GET("/tasks/:id", handler.GetTaskByID)
+		api.POST("/tasks", handler.CreateTask)
+		api.PUT("/tasks/:id", handler.UpdateTask)
+		api.DELETE("/tasks/:id", handler.DeleteTask)
+		api.GET("/tasks/status/:status", handler.GetTasksByStatus)
+		api.GET("/tasks/paginated", handler.GetTasksPaginated)
+		api.GET("/health", handler.HealthCheck)
+		api.GET("/stats", handler.GetStorageStats)
+	}
+
+	return handler, router
+}
+
 // createTestTask is a helper to create a task for testing
-func createTestTask(t *testing.T, handler *TaskHandler, name string, status models.TaskStatus) *models.Task {
+func createTestTask(tb testing.TB, handler *TaskHandler, name string, status models.TaskStatus) *models.Task {
 	req := &models.CreateTaskRequest{
 		Name:   name,
 		Status: status,
 	}
 
 	task, err := handler.storage.Create(req)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	return task
 }
@@ -713,4 +742,190 @@ func mustAtoi(s string) int {
 		panic(err)
 	}
 	return i
+}
+
+// API Benchmark Tests for High Concurrency
+
+// BenchmarkAPI_CreateTask tests task creation performance
+func BenchmarkAPI_CreateTask(b *testing.B) {
+	_, router := setupBenchmarkHandler()
+
+	requestBody := `{"name":"Benchmark Task","status":0}`
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			req, _ := http.NewRequest("POST", "/api/v1/tasks", bytes.NewBufferString(requestBody))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusCreated {
+				b.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+			}
+		}
+	})
+}
+
+// BenchmarkAPI_GetAllTasks tests getting all tasks performance
+func BenchmarkAPI_GetAllTasks(b *testing.B) {
+	handler, router := setupBenchmarkHandler()
+
+	// Pre-populate with some tasks
+	for i := 0; i < 100; i++ {
+		createTestTask(b, handler, fmt.Sprintf("Task %d", i), models.TaskIncomplete)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			req, _ := http.NewRequest("GET", "/api/v1/tasks", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				b.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+			}
+		}
+	})
+}
+
+// BenchmarkAPI_GetTaskByID tests getting task by ID performance
+func BenchmarkAPI_GetTaskByID(b *testing.B) {
+	handler, router := setupBenchmarkHandler()
+
+	// Create a test task
+	task := createTestTask(b, handler, "Benchmark Task", models.TaskIncomplete)
+	url := fmt.Sprintf("/api/v1/tasks/%s", task.ID)
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			req, _ := http.NewRequest("GET", url, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				b.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+			}
+		}
+	})
+}
+
+// BenchmarkAPI_UpdateTask tests task update performance
+func BenchmarkAPI_UpdateTask(b *testing.B) {
+	handler, router := setupBenchmarkHandler()
+
+	// Create a test task
+	task := createTestTask(b, handler, "Original Task", models.TaskIncomplete)
+	url := fmt.Sprintf("/api/v1/tasks/%s", task.ID)
+	requestBody := `{"name":"Updated Task"}`
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			req, _ := http.NewRequest("PUT", url, bytes.NewBufferString(requestBody))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				b.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+			}
+		}
+	})
+}
+
+// BenchmarkAPI_HealthCheck tests health check endpoint performance
+func BenchmarkAPI_HealthCheck(b *testing.B) {
+	_, router := setupBenchmarkHandler()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				b.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+			}
+		}
+	})
+}
+
+// BenchmarkAPI_MixedWorkload tests mixed read/write operations
+func BenchmarkAPI_MixedWorkload(b *testing.B) {
+	handler, router := setupBenchmarkHandler()
+
+	// Pre-populate with some tasks
+	tasks := make([]*models.Task, 50)
+	for i := 0; i < 50; i++ {
+		tasks[i] = createTestTask(b, handler, fmt.Sprintf("Task %d", i), models.TaskIncomplete)
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			switch i % 4 {
+			case 0: // GET all tasks (25%)
+				req, _ := http.NewRequest("GET", "/api/v1/tasks", nil)
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, req)
+
+			case 1: // GET task by ID (25%)
+				taskID := tasks[i%len(tasks)].ID
+				url := fmt.Sprintf("/api/v1/tasks/%s", taskID)
+				req, _ := http.NewRequest("GET", url, nil)
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, req)
+
+			case 2: // CREATE task (25%)
+				body := fmt.Sprintf(`{"name":"Benchmark Task %d","status":0}`, i)
+				req, _ := http.NewRequest("POST", "/api/v1/tasks", bytes.NewBufferString(body))
+				req.Header.Set("Content-Type", "application/json")
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, req)
+
+			case 3: // UPDATE task (25%)
+				taskID := tasks[i%len(tasks)].ID
+				url := fmt.Sprintf("/api/v1/tasks/%s", taskID)
+				body := fmt.Sprintf(`{"name":"Updated Task %d"}`, i)
+				req, _ := http.NewRequest("PUT", url, bytes.NewBufferString(body))
+				req.Header.Set("Content-Type", "application/json")
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, req)
+			}
+			i++
+		}
+	})
+}
+
+// BenchmarkAPI_HighConcurrency tests API under high concurrent load
+func BenchmarkAPI_HighConcurrency(b *testing.B) {
+	handler, router := setupBenchmarkHandler()
+
+	// Pre-populate with tasks
+	for i := 0; i < 1000; i++ {
+		createTestTask(b, handler, fmt.Sprintf("Task %d", i), models.TaskIncomplete)
+	}
+
+	b.ResetTimer()
+
+	// Set high parallelism for concurrency testing
+	b.SetParallelism(100)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			// Simulate high concurrent read operations
+			req, _ := http.NewRequest("GET", "/api/v1/tasks", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				b.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+			}
+		}
+	})
 }
