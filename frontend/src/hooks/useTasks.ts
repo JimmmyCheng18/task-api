@@ -30,13 +30,19 @@ export const useTasks = () => {
         response = await apiService.getTasksByStatus(status);
       }
 
-      if (response.success && response.data) {
+      if (response.success && response.data !== undefined) {
         setTasks(response.data);
         setTotalTasks(response.count || response.data.length);
       } else {
+        // Clear tasks when API fails to prevent showing stale data
+        setTasks([]);
+        setTotalTasks(0);
         showError(response.error || 'Failed to load tasks');
       }
     } catch (error) {
+      // Clear tasks when exception occurs to prevent showing stale data
+      setTasks([]);
+      setTotalTasks(0);
       showError('Failed to load tasks');
     } finally {
       setLoading(false);

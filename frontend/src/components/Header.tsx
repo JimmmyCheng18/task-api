@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { TaskStats } from '../types';
-import { ApiConfig } from '../services/api';
 import apiService from '../services/api';
 
 interface HeaderProps {
@@ -9,26 +8,9 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ stats, onNotification }) => {
-  const [port, setPort] = useState(ApiConfig.getCurrentPort());
-
-  const handleUpdatePort = () => {
-    if (port && port > 0 && port <= 65535) {
-      ApiConfig.updatePort(port);
-      onNotification(`API port updated to ${port}`, 'success');
-    } else {
-      onNotification('Please enter a valid port number (1-65535)', 'error');
-    }
-  };
-
   const handleTestConnection = async () => {
     const result = await apiService.testConnection();
     onNotification(result.message, result.success ? 'success' : 'error');
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleUpdatePort();
-    }
   };
 
   return (
@@ -54,17 +36,6 @@ const Header: React.FC<HeaderProps> = ({ stats, onNotification }) => {
 
       <div className="port-config">
         <div className="port-settings">
-          <label htmlFor="api-port">API Port:</label>
-          <input
-            type="number"
-            id="api-port"
-            value={port}
-            onChange={(e) => setPort(parseInt(e.target.value))}
-            onKeyPress={handleKeyPress}
-            min="1"
-            max="65535"
-          />
-          <button onClick={handleUpdatePort}>Update</button>
           <button id="test-connection" onClick={handleTestConnection}>
             Test Connection
           </button>
