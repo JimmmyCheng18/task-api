@@ -34,6 +34,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"task-api/internal/config"
 	"task-api/internal/routes"
@@ -70,8 +71,13 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 		// Parse allowed origins for production
 		var allowedOrigins []string
 		if cfg.AllowedOrigins != "*" && cfg.AllowedOrigins != "" {
-			// Simple parsing - in production you might want more sophisticated parsing
-			allowedOrigins = []string{cfg.AllowedOrigins}
+			// Parse comma-separated origins
+			for _, origin := range strings.Split(cfg.AllowedOrigins, ",") {
+				trimmed := strings.TrimSpace(origin)
+				if trimmed != "" {
+					allowedOrigins = append(allowedOrigins, trimmed)
+				}
+			}
 		} else {
 			allowedOrigins = []string{"*"}
 		}
