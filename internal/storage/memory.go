@@ -21,7 +21,7 @@ type shard struct {
 // This implementation is thread-safe using sharding to reduce lock contention
 type MemoryStorage struct {
 	shards     []*shard  // Array of shards
-	shardCount int       // Number of shards
+	shardCount uint32    // Number of shards (using uint32 to match hash algorithm)
 	maxTasks   int       // Maximum number of tasks allowed
 	taskCount  int64     // Atomic task counter for fast count operations
 	taskPool   sync.Pool // Object pool to reduce GC pressure
@@ -57,9 +57,19 @@ func NewMemoryStorage(maxTasks int) *MemoryStorage {
 		}
 	}
 
+	// Safe conversion with bounds checking to prevent integer overflow
+	var safeShardCount uint32
+	if shardCount < 0 || shardCount > int(^uint32(0)>>1) {
+		// Use default safe value if out of bounds
+		safeShardCount = 32
+	} else {
+		// #nosec G115 - Safe conversion with bounds checking above
+		safeShardCount = uint32(shardCount)
+	}
+
 	return &MemoryStorage{
 		shards:     shards,
-		shardCount: shardCount,
+		shardCount: safeShardCount,
 		maxTasks:   maxTasks,
 		taskCount:  0,
 		taskPool: sync.Pool{
@@ -73,7 +83,8 @@ func NewMemoryStorage(maxTasks int) *MemoryStorage {
 // getShard returns the shard for a given key using FNV-1a hash algorithm
 func (ms *MemoryStorage) getShard(key string) *shard {
 	hash := ms.fnv32Hash(key)
-	return ms.shards[hash%uint32(ms.shardCount)]
+	shardIndex := hash % ms.shardCount
+	return ms.shards[shardIndex]
 }
 
 // fnv32Hash implements FNV-1a 32-bit hash algorithm for fast key distribution
@@ -293,7 +304,7 @@ func (ms *MemoryStorage) GetUsage() map[string]interface{} {
 	currentCount := atomic.LoadInt64(&ms.taskCount)
 
 	// Calculate per-shard distribution
-	shardDistribution := make([]int, ms.shardCount)
+	shardDistribution := make([]int, int(ms.shardCount))
 	for i, shard := range ms.shards {
 		shard.mutex.RLock()
 		shardDistribution[i] = len(shard.tasks)
@@ -305,7 +316,7 @@ func (ms *MemoryStorage) GetUsage() map[string]interface{} {
 		"max_tasks":          ms.maxTasks,
 		"usage_percent":      float64(currentCount) / float64(ms.maxTasks) * 100,
 		"available":          ms.maxTasks - int(currentCount),
-		"shard_count":        ms.shardCount,
+		"shard_count":        int(ms.shardCount),
 		"shard_distribution": shardDistribution,
 		"storage_type":       "sharded_memory",
 	}

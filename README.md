@@ -1,10 +1,10 @@
 # Task API
 
-A modern, well-structured REST API for task management built with Go and Gin framework, following clean architecture principles and industry best practices.
+High-performance REST API for task management built with Go, featuring clean architecture and advanced concurrency patterns.
 
 ## 🏗️ Architecture
 
-This project follows a clean, layered architecture with clear separation of concerns:
+Clean, layered architecture with clear separation of concerns:
 
 ```
 task-api-service/
@@ -29,7 +29,9 @@ task-api-service/
 │   │
 │   ├── middleware/                   # Middleware components
 │   │   ├── cors.go                   # CORS middleware
-│   │   └── logger.go                 # Logging middleware
+│   │   ├── logger.go                 # Logging middleware
+│   │   ├── rate_limit.go             # Rate limiting
+│   │   └── rate_limit_test.go        # Rate limit tests
 │   │
 │   ├── routes/                       # Route configuration
 │   │   └── routes.go                 # Route definitions
@@ -53,7 +55,8 @@ task-api-service/
 ├── .dockerignore                     # Docker ignore patterns
 ├── .env.example                      # Environment variables example
 ├── .gitignore                        # Git ignore patterns
-├── Dockerfile                        # Docker container definition
+├── docker-compose.yml                # Multi-service orchestration
+├── Dockerfile                        # Backend container definition
 ├── go.mod                            # Go modules file
 ├── go.sum                            # Go modules checksum
 ├── Makefile                          # Build automation
@@ -61,403 +64,96 @@ task-api-service/
 └── VERSION                           # Version file
 ```
 
-## ⚡ High Concurrency
+## ⚡ High Performance Features
 
-This Task API is designed to handle high-concurrency scenarios efficiently through advanced memory storage optimization and architectural improvements.
+**Sharded Memory Storage**
+- 32 independent shards with FNV-1a hash distribution
+- Per-shard RWMutex for minimal lock contention
+- Atomic operations and object pooling
+- O(1) performance for most operations
 
-### 🏎️ Sharded Memory Storage
-
-The application implements a **sharded memory storage** architecture to maximize concurrent performance:
-
-#### Core Features
-- **32 Shards**: Data is distributed across 32 independent shards using FNV-1a hash algorithm
-- **Per-Shard Locking**: Each shard has its own `RWMutex`, dramatically reducing lock contention
-- **Atomic Operations**: Task counting uses atomic operations for O(1) performance
-- **Object Pooling**: `sync.Pool` reduces garbage collection pressure
-- **UUID Generation**: Fast UUID v4 generation without collision checking (probability ~10^-15)
-
-## � Quick Start
-
-### Prerequisites
-
-- Go 1.24
-- Git
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd task-api
-   ```
-
-2. **Install dependencies**
-   ```bash
-   make deps
-   ```
-
-3. **Build the application**
-   ```bash
-   make build
-   ```
-
-4. **Run the application**
-   ```bash
-   make run
-   ```
-   
-   Or specify a custom port:
-   ```bash
-   PORT=3000 make run
-   ```
-
-The API will be available at `http://localhost:8080` (or your specified port)
-
-### Development Mode
-
-For development with hot reload:
+## 🚀 Quick Start
 
 ```bash
+# Clone and setup
+git clone <repository-url> && cd task-api
+make deps
+
+# Development with hot reload
 make dev
-```
 
-Or with a custom port:
-```bash
+# Custom port
 PORT=3000 make dev
 ```
 
-## 🧪 Testing
+API available at `http://localhost:8080` | Swagger UI: `/swagger/index.html`
 
-### Run all tests
-```bash
-make test
-```
-
-### Run tests with coverage
-```bash
-make test-coverage
-```
-
-### Run specific test types
-```bash
-make test-unit        # Unit tests only
-make benchmark        # Benchmark tests with coverage
-```
-
-### Benchmark Testing with Coverage
-
-The `make benchmark` command now includes comprehensive coverage analysis:
+## 🧪 Testing & Quality
 
 ```bash
-make benchmark
+make test              # Run all tests
+make test-coverage     # Tests with coverage
+make benchmark         # Performance tests
+make check             # All quality checks
 ```
 
-This will:
-- Run all benchmark tests with memory allocation tracking
-- Generate coverage profile (`coverage/benchmark-coverage.out`)
-- Display coverage summary in terminal
-- Create HTML coverage report (`coverage/benchmark-coverage.html`)
+## 📖 API Endpoints
 
-**Coverage Reports Location:**
-- **Profile**: `./coverage/benchmark-coverage.out`
-- **HTML Report**: `./coverage/benchmark-coverage.html`
-
-The benchmark coverage is separate from regular test coverage, allowing you to see which code paths are exercised during performance testing.
-
-## 🔧 Development
-
-### Code Quality
-
-```bash
-make format      # Format code
-make lint        # Run linting
-make security    # Security checks
-make check       # Run all checks
-```
-
-### Development Tools Setup
-
-```bash
-make install-tools  # Install development tools
-make setup          # Complete setup
-```
-
-
-## 📖 API Documentation
-
-### 📚 Swagger UI - Interactive Documentation
-
-**Access Swagger UI**:
-- **Development**: `http://localhost:8080/swagger/index.html`
-- **Custom Port**: `http://localhost:{PORT}/swagger/index.html`
-- **Direct Access**: `http://localhost:8080/swagger`
-
-**API Specifications**:
-- **JSON Format**: `http://localhost:8080/docs/swagger.json`
-- **YAML Format**: `http://localhost:8080/docs/swagger.yaml`
-
-**Automatic Generation**: Swagger documentation is automatically generated during:
-- `make dev` - Development mode
-- `make build` - Build application
-- `make build-all` - Multi-platform build
-- `make docker-build` - Docker image build
-
-**Manual Generation**:
-```bash
-make swagger-generate  # Generate Swagger docs
-# or
-make docs             # Alias for swagger-generate
-```
-
-**Quick Access**:
-```bash
-# Start the application
-make dev
-
-# Visit Swagger UI in your browser
-open http://localhost:8080/swagger/index.html
-
-# Or with custom port
-PORT=3000 make dev
-open http://localhost:3000/swagger/index.html
-```
-
-**Generated Files**:
-- `docs/docs.go` - Go package for embedding
-- `docs/swagger.json` - JSON API specification
-- `docs/swagger.yaml` - YAML API specification
-
-### 🔗 API Endpoints
-
-#### Health Check
-- `GET /health` - Basic health check
-- `GET /api/v1/health` - Detailed health check
-
-#### Tasks
-- `GET /api/v1/tasks` - Get all tasks
-- `GET /api/v1/tasks/paginated` - Get tasks with pagination
-- `POST /api/v1/tasks` - Create a new task
+**Core Endpoints:**
+- `GET /api/v1/tasks` - List tasks (with pagination support)
+- `POST /api/v1/tasks` - Create task
 - `GET /api/v1/tasks/{id}` - Get task by ID
 - `PUT /api/v1/tasks/{id}` - Update task
 - `DELETE /api/v1/tasks/{id}` - Delete task
-- `GET /api/v1/tasks/status/{status}` - Get tasks by status
+- `GET /api/v1/tasks/status/{status}` - Filter by status
+- `GET /api/v1/stats` - Storage statistics
 
-#### Statistics
-- `GET /api/v1/stats` - Get storage statistics
-
-### 💡 API Usage Examples
-
-**Create a task:**
+**Usage Example:**
 ```bash
+# Create task
 curl -X POST http://localhost:8080/api/v1/tasks \
   -H "Content-Type: application/json" \
   -d '{"name": "Complete project", "status": 0}'
 ```
 
-**Get all tasks:**
-```bash
-curl http://localhost:8080/api/v1/tasks
-```
-
-**Update a task:**
-```bash
-curl -X PUT http://localhost:8080/api/v1/tasks/{id} \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Updated task", "status": 1}'
-```
-
-For more examples, see `examples/curl_examples.sh`
+**Interactive Documentation:** Access Swagger UI at `/swagger/index.html`
 
 ## ⚙️ Configuration
 
-The application can be configured using environment variables:
-
+Key environment variables:
 - `PORT` - Server port (default: 8080)
-- `HOST` - Server host (default: 0.0.0.0)
-- `GIN_MODE` - Gin mode: debug, release, test (default: release)
-- `ALLOWED_ORIGINS` - CORS allowed origins (default: *)
-- `SHUTDOWN_TIMEOUT` - Graceful shutdown timeout in seconds (default: 30)
-- `READ_TIMEOUT` - HTTP read timeout in seconds (default: 60)
-- `WRITE_TIMEOUT` - HTTP write timeout in seconds (default: 60)
-- `IDLE_TIMEOUT` - HTTP idle timeout in seconds (default: 120)
+- `GIN_MODE` - debug/release/test (default: release)
+- `ALLOWED_ORIGINS` - CORS origins (default: *)
 
-### Environment Configuration
-
-1. **Copy the example environment file:**
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Edit the `.env` file with your preferences:**
-   ```bash
-   PORT=3000
-   GIN_MODE=debug
-   ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
-   ```
-
-3. **Run with environment file:**
-   ```bash
-   source .env && make dev
-   ```
-
-### Quick Port Configuration Examples
-
-**Development mode with custom port:**
 ```bash
-PORT=3000 make dev
+# Quick configuration
+cp .env.example .env
+PORT=3000 GIN_MODE=debug make dev
 ```
 
-**Production build with custom port:**
-```bash
-PORT=9000 make run
-```
+## 🐳 Docker & Deployment
 
-**Direct binary execution:**
-```bash
-PORT=3000 GIN_MODE=debug ./bin/task-api
-```
-
-## 🐳 Docker
-
-### Build Docker image
+**Single Service:**
 ```bash
 make docker-build
-```
-
-### Run with Docker
-
-**Default port (8080):**
-```bash
 make docker-run
 ```
 
-**Custom host port:**
-```bash
-PORT=3000 make docker-run
-```
-
-This maps host port 3000 to container port 8080.
-
-### Docker Environment Variables
-
-You can use environment variables when running Docker containers:
-
-1. **Create a `.env` file:**
-   ```env
-   PORT=8080
-   GIN_MODE=release
-   ALLOWED_ORIGINS=*
-   ```
-
-### Docker Run Examples
-
-**Manual Docker run with custom settings:**
-```bash
-# Run on custom port with environment variables
-docker run --rm -p 3000:8080 \
-  -e PORT=8080 \
-  -e GIN_MODE=debug \
-  -e ALLOWED_ORIGINS="*" \
-  task-api:latest
-
-# Run with custom internal port
-docker run --rm -p 3000:9000 \
-  -e PORT=9000 \
-  -e HOST=0.0.0.0 \
-  task-api:latest
-```
-
-
-## 🐳 Docker Compose
-
-This project supports running both frontend and backend services together using Docker Compose for a complete development and production environment.
-
-### Services
-
-- **Backend API Service** (`task-api-backend`)
-  - Port: `3333:8080`
-  - Health check endpoint: `/health`
-  - Environment: Production mode (`GIN_MODE=release`)
-
-- **Frontend Service** (`task-frontend`)
-  - Port: `3666:80`
-  - Serves static files via Nginx
-  - Depends on backend service health
-
-- **Network**
-  - Custom bridge network: `task-management-network`
-  - Services communicate via container names
-
-### Quick Start
-
-Run all services with one command:
-
+**Full Stack (Frontend + Backend):**
 ```bash
 make compose-deploy
 ```
-
-This will build images, start services, and display access URLs:
-
 - Frontend: http://localhost:3666
-- Backend API: http://localhost:3333
+- Backend: http://localhost:3333
 - API Docs: http://localhost:3333/swagger/index.html
 
-### Common Commands
+## 🛠️ Development
 
 ```bash
-make compose-build    # Build all service images
-make compose-up       # Start all services
-make compose-down     # Stop all services
-make compose-restart  # Restart all services
-make compose-logs     # View logs
-make compose-status   # Check service status
+make format           # Format code
+make lint            # Run linting
+make install-tools   # Setup dev tools
+make build-all       # Multi-platform build
 ```
 
-For detailed troubleshooting and advanced usage, refer to the `docker-compose.yml` file and project documentation.
-## � Project Structure Principles
-
-### Clean Architecture
-- **Separation of Concerns**: Each layer has a single responsibility
-- **Dependency Inversion**: Higher-level modules don't depend on lower-level modules
-- **Interface Segregation**: Clients don't depend on interfaces they don't use
-
-### Package Organization
-- `cmd/` - Application entry points
-- `internal/` - Private application code
-- `docs/` - Documentation and API specifications
-- `examples/` - Usage examples and scripts
-- `scripts/` - Build and deployment scripts
-
-### Code Quality Standards
-- Comprehensive test coverage
-- Clear error handling
-- Consistent naming conventions
-- Proper documentation
-- Security best practices
-
-## �️ Development Workflow
-
-1. **Feature Development**
-   ```bash
-   git checkout -b feature/new-feature
-   make dev  # Start development server
-   # Write code and tests
-   make check  # Run quality checks
-   ```
-
-2. **Testing**
-   ```bash
-   make test-coverage  # Ensure good coverage
-   make check         # All quality checks
-   ```
-
-3. **Building**
-   ```bash
-   make build      # Single platform
-   make build-all  # All platforms
-   ```
-
-4. **Release**
-   ```bash
-   make release  # Create release build
-   ```
+Built with clean architecture principles, comprehensive testing, and production-ready Docker deployment.
