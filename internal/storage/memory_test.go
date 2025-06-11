@@ -503,7 +503,8 @@ func taskStatusPtr(status models.TaskStatus) *models.TaskStatus {
 
 // Benchmark tests
 func BenchmarkMemoryStorage_Create(b *testing.B) {
-	storage := NewMemoryStorage(1000)
+	// Use a much larger limit to avoid hitting the limit during benchmarks
+	storage := NewMemoryStorage(b.N + 1000)
 	req := &models.CreateTaskRequest{Name: "Benchmark Task", Status: models.TaskIncomplete}
 
 	b.ResetTimer()
@@ -516,7 +517,7 @@ func BenchmarkMemoryStorage_Create(b *testing.B) {
 }
 
 func BenchmarkMemoryStorage_GetAll(b *testing.B) {
-	storage := NewMemoryStorage(1000)
+	storage := NewMemoryStorage(2000) // Increase limit to avoid issues
 	req := &models.CreateTaskRequest{Name: "Benchmark Task", Status: models.TaskIncomplete}
 
 	// Pre-populate with 1000 tasks
@@ -691,7 +692,7 @@ func TestMemoryStorage_GetUsage(t *testing.T) {
 }
 
 func BenchmarkMemoryStorage_GetByID(b *testing.B) {
-	storage := NewMemoryStorage(1000)
+	storage := NewMemoryStorage(2000) // Increase limit to avoid issues
 	req := &models.CreateTaskRequest{Name: "Benchmark Task", Status: models.TaskIncomplete}
 
 	task, err := storage.Create(req)

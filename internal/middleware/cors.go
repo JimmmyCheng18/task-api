@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -73,17 +75,17 @@ func CORSWithConfig(config CORSConfig) gin.HandlerFunc {
 
 		// Set Access-Control-Allow-Methods
 		if len(config.AllowMethods) > 0 {
-			c.Header("Access-Control-Allow-Methods", joinStrings(config.AllowMethods, ", "))
+			c.Header("Access-Control-Allow-Methods", strings.Join(config.AllowMethods, ", "))
 		}
 
 		// Set Access-Control-Allow-Headers
 		if len(config.AllowHeaders) > 0 {
-			c.Header("Access-Control-Allow-Headers", joinStrings(config.AllowHeaders, ", "))
+			c.Header("Access-Control-Allow-Headers", strings.Join(config.AllowHeaders, ", "))
 		}
 
 		// Set Access-Control-Expose-Headers
 		if len(config.ExposeHeaders) > 0 {
-			c.Header("Access-Control-Expose-Headers", joinStrings(config.ExposeHeaders, ", "))
+			c.Header("Access-Control-Expose-Headers", strings.Join(config.ExposeHeaders, ", "))
 		}
 
 		// Set Access-Control-Allow-Credentials
@@ -93,7 +95,7 @@ func CORSWithConfig(config CORSConfig) gin.HandlerFunc {
 
 		// Set Access-Control-Max-Age for preflight requests
 		if config.MaxAge > 0 {
-			c.Header("Access-Control-Max-Age", formatInt(config.MaxAge))
+			c.Header("Access-Control-Max-Age", strconv.Itoa(config.MaxAge))
 		}
 
 		// Handle preflight requests
@@ -162,44 +164,6 @@ func isOriginAllowed(origin string, allowedOrigins []string) bool {
 		// For example: *.example.com
 	}
 	return false
-}
-
-// joinStrings joins a slice of strings with a separator
-func joinStrings(slice []string, sep string) string {
-	if len(slice) == 0 {
-		return ""
-	}
-
-	result := slice[0]
-	for i := 1; i < len(slice); i++ {
-		result += sep + slice[i]
-	}
-	return result
-}
-
-// formatInt converts an integer to string
-func formatInt(i int) string {
-	// Simple integer to string conversion
-	if i == 0 {
-		return "0"
-	}
-
-	var result string
-	negative := i < 0
-	if negative {
-		i = -i
-	}
-
-	for i > 0 {
-		result = string(rune('0'+(i%10))) + result
-		i /= 10
-	}
-
-	if negative {
-		result = "-" + result
-	}
-
-	return result
 }
 
 // SecurityHeaders adds common security headers

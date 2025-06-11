@@ -95,7 +95,8 @@ func LoggerWithConfig(config LoggerConfig) gin.HandlerFunc {
 			LogLevel:   logLevel,
 		}, config)
 
-		config.Output.Write([]byte(logMessage + "\n"))
+		// Write log message and ignore error for non-critical logging operation
+		_, _ = config.Output.Write([]byte(logMessage + "\n"))
 	}
 }
 
