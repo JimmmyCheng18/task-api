@@ -1,0 +1,83 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Build artifacts
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+coverage.out
+coverage.html
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
+# Docker files (except Dockerfile)
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Development tools
+Makefile
+air.toml
+
+# Examples and docs
+examples/
+# docs/ - commented out because docs contains generated Go code needed for compilation
+
+# Node modules (if any frontend)
+node_modules/
+npm-debug.log*
+
+# Go specific
+vendor/
+*.mod.backup
+
+# Testing
+testdata/
+*_test.go
+
+# Scripts
+scripts/
+tools/
