@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"task-api/internal/interfaces"
 	"task-api/internal/models"
 	"task-api/internal/storage"
@@ -70,7 +71,7 @@ func (h *TaskHandler) GetTaskByID(c *gin.Context) {
 	task, err := h.storage.GetByID(id)
 	if err != nil {
 		// Check if it's a "not found" error
-		if contains(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, models.NewErrorResponse(
 				"Task not found",
 				err,
@@ -191,7 +192,7 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 	task, err := h.storage.Update(id, &req)
 	if err != nil {
 		// Check if it's a "not found" error
-		if contains(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, models.NewErrorResponse(
 				"Task not found",
 				err,
@@ -236,7 +237,7 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 	_, err := h.storage.GetByID(id)
 	if err != nil {
 		// Check if it's a "not found" error
-		if contains(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, models.NewErrorResponse(
 				"Task not found",
 				err,
@@ -505,20 +506,4 @@ func (h *TaskHandler) GetStorageStats(c *gin.Context) {
 		"success": true,
 		"data":    stats,
 	})
-}
-
-// Helper function to check if a string contains a substring
-func contains(str, substr string) bool {
-	return len(str) >= len(substr) && (str == substr || (len(str) > len(substr) &&
-		(str[:len(substr)] == substr || str[len(str)-len(substr):] == substr ||
-			containsMiddle(str, substr))))
-}
-
-func containsMiddle(str, substr string) bool {
-	for i := 0; i <= len(str)-len(substr); i++ {
-		if str[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

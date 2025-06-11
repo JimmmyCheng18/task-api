@@ -62,7 +62,7 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 	var router *gin.Engine
 	switch cfg.Environment {
 	case "debug", "development":
-		router = routes.SetupDevelopmentRouter(memStorage)
+		router = routes.SetupDevelopmentRouterWithConfig(memStorage, cfg)
 		// Add debug routes in development
 		routes.SetupDebugRoutes(router)
 	case "test":
@@ -81,7 +81,7 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 		} else {
 			allowedOrigins = []string{"*"}
 		}
-		router = routes.SetupProductionRouter(memStorage, allowedOrigins)
+		router = routes.SetupProductionRouterWithConfig(memStorage, allowedOrigins, cfg)
 	}
 
 	// Add metrics endpoint

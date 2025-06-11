@@ -88,18 +88,6 @@ func (ms *MemoryStorage) fnv32Hash(key string) uint32 {
 	return hash
 }
 
-// getTaskFromPool gets a task from the object pool to reduce allocations
-func (ms *MemoryStorage) getTaskFromPool() *models.Task {
-	return ms.taskPool.Get().(*models.Task)
-}
-
-// putTaskToPool returns a task to the object pool after use
-func (ms *MemoryStorage) putTaskToPool(task *models.Task) {
-	// Reset the task to prevent memory leaks
-	*task = models.Task{}
-	ms.taskPool.Put(task)
-}
-
 // GetAll retrieves all tasks from all shards
 // Returns a copy of all tasks to prevent external modifications
 func (ms *MemoryStorage) GetAll() ([]*models.Task, error) {
@@ -252,7 +240,7 @@ func (ms *MemoryStorage) Clear() error {
 // HealthCheck verifies if the storage is accessible and functioning
 func (ms *MemoryStorage) HealthCheck() error {
 	// Check if shards are properly initialized
-	if ms.shards == nil || len(ms.shards) == 0 {
+	if len(ms.shards) == 0 {
 		return fmt.Errorf("memory storage shards are not properly initialized")
 	}
 
