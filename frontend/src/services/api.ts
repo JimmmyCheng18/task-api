@@ -5,6 +5,9 @@ class ApiConfig {
   private static baseUrl: string = '';
 
   private static getApiBaseUrl(): string {
+    // Get current hostname from window.location
+    const currentHostname = window.location.hostname;
+    
     // Check URL parameters for custom port
     const urlParams = new URLSearchParams(window.location.search);
     const customPort = urlParams.get('port');
@@ -20,7 +23,8 @@ class ApiConfig {
       localStorage.setItem('api-port', customPort);
     }
     
-    return `http://localhost:${port}/api/v1`;
+    // Use the same hostname as the current page to avoid CORS issues
+    return `http://${currentHostname}:${port}/api/v1`;
   }
 
   static getBaseUrl(): string {
@@ -97,7 +101,8 @@ class ApiService {
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`http://localhost:${ApiConfig.getCurrentPort()}/health`);
+      const currentHostname = window.location.hostname;
+      const response = await fetch(`http://${currentHostname}:${ApiConfig.getCurrentPort()}/health`);
       if (response.ok) {
         const data = await response.json();
         return {
