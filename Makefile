@@ -29,6 +29,7 @@ NC := \033[0m # No Color
 
 .PHONY: help build clean test test-coverage test-unit \
         run dev lint format security deps check docker docker-build docker-run \
+        compose-build compose-up compose-down compose-logs compose-restart compose-status \
         install-tools setup version \
         release deploy-dev deploy-prod benchmark profile docs
 
@@ -247,10 +248,51 @@ deploy-prod: release docker-build
 	@echo "$(BLUE)🚀 Deploying to production environment...$(NC)"
 	# Add your production deployment commands here
 
+## compose-build: Build all services with docker-compose
+compose-build:
+	@echo "$(BLUE)🐳 Building all services with docker-compose...$(NC)"
+	docker-compose build
+
+## compose-up: Start all services with docker-compose
+compose-up:
+	@echo "$(GREEN)🚀 Starting all services...$(NC)"
+	@echo "$(YELLOW)Frontend: http://localhost:3666$(NC)"
+	@echo "$(YELLOW)Backend API: http://localhost:3333$(NC)"
+	docker-compose up -d
+
+## compose-down: Stop all services
+compose-down:
+	@echo "$(BLUE)🛑 Stopping all services...$(NC)"
+	docker-compose down
+
+## compose-logs: View logs from all services
+compose-logs:
+	@echo "$(BLUE)📋 Viewing logs from all services...$(NC)"
+	docker-compose logs -f
+
+## compose-restart: Restart all services
+compose-restart: compose-down compose-up
+
+## compose-status: Show status of all services
+compose-status:
+	@echo "$(BLUE)📊 Service status:$(NC)"
+	docker-compose ps
+
+## compose-deploy: Build and deploy all services
+compose-deploy: compose-build compose-up
+	@echo "$(GREEN)🎉 Full stack deployed successfully!$(NC)"
+	@echo "$(YELLOW)Frontend: http://localhost:3666$(NC)"
+	@echo "$(YELLOW)Backend API: http://localhost:3333$(NC)"
+	@echo "$(YELLOW)API Documentation: http://localhost:3333/swagger/index.html$(NC)"
+
 # Development shortcuts
-.PHONY: b r t c d
+.PHONY: b r t c d cup cdown clogs cstatus
 b: build
 r: run
 t: test
 c: clean
 d: dev
+cup: compose-up
+cdown: compose-down
+clogs: compose-logs
+cstatus: compose-status
