@@ -569,7 +569,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "storage_type": {
-                    "description": "Type of storage (memory, database, etc.)",
+                    "description": "Type of storage (sharded_memory, database, etc.)",
                     "type": "string"
                 },
                 "total_tasks": {
