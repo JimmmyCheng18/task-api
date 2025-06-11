@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -87,7 +88,7 @@ func RateLimit(config RateLimitConfig) gin.HandlerFunc {
 
 // Allow checks if the request is allowed
 func (rl *RateLimiter) Allow(c *gin.Context) bool {
-	clientIP := c.ClientIP()
+	clientIP := getClientIP(c)
 	apiKey := c.GetHeader("X-API-Key")
 
 	now := time.Now()
@@ -277,7 +278,7 @@ func getCustomLimit(path, method string, baseConfig RateLimitConfig) int {
 
 // allowWithCustomLimit checks requests with custom limits
 func (rl *RateLimiter) allowWithCustomLimit(c *gin.Context, customLimit int) bool {
-	clientIP := c.ClientIP()
+	clientIP := getClientIP(c)
 	apiKey := c.GetHeader("X-API-Key")
 
 	now := time.Now()
@@ -298,4 +299,24 @@ func (rl *RateLimiter) allowWithCustomLimit(c *gin.Context, customLimit int) boo
 	}
 
 	return true
+}
+
+// getClientIP extracts the client IP from various sources
+func getClientIP(c *gin.Context) string {
+	// Check X-Forwarded-For header first (for proxy/load balancer scenarios)
+	if forwarded := c.GetHeader("X-Forwarded-For"); forwarded != "" {
+		// X-Forwarded-For can contain multiple IPs, take the first one
+		if idx := strings.Index(forwarded, ","); idx != -1 {
+			return strings.TrimSpace(forwarded[:idx])
+		}
+		return strings.TrimSpace(forwarded)
+	}
+
+	// Check X-Real-IP header
+	if realIP := c.GetHeader("X-Real-IP"); realIP != "" {
+		return strings.TrimSpace(realIP)
+	}
+
+	// Fall back to Gin's ClientIP method
+	return c.ClientIP()
 }
