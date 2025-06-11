@@ -695,7 +695,7 @@ func TestTaskHandler_GetStorageStats(t *testing.T) {
 
 	data := response["data"].(map[string]interface{})
 	assert.Equal(t, float64(2), data["total_tasks"])
-	assert.Equal(t, "memory", data["storage_type"])
+	assert.Equal(t, "sharded_memory", data["storage_type"])
 }
 
 // Helper functions for tests

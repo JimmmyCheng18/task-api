@@ -61,7 +61,22 @@ task-api-service/
 └── VERSION                           # Version file
 ```
 
-## 🚀 Quick Start
+## ⚡ High Concurrency
+
+This Task API is designed to handle high-concurrency scenarios efficiently through advanced memory storage optimization and architectural improvements.
+
+### 🏎️ Sharded Memory Storage
+
+The application implements a **sharded memory storage** architecture to maximize concurrent performance:
+
+#### Core Features
+- **32 Shards**: Data is distributed across 32 independent shards using FNV-1a hash algorithm
+- **Per-Shard Locking**: Each shard has its own `RWMutex`, dramatically reducing lock contention
+- **Atomic Operations**: Task counting uses atomic operations for O(1) performance
+- **Object Pooling**: `sync.Pool` reduces garbage collection pressure
+- **UUID Generation**: Fast UUID v4 generation without collision checking (probability ~10^-15)
+
+## � Quick Start
 
 ### Prerequisites
 

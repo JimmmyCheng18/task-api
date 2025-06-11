@@ -1,0 +1,32 @@
+{
+  "name": "task-management-frontend",
+  "version": "1.0.0",
+  "description": "A React frontend for the Task Management API",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview --port 8000",
+    "serve": "vite preview --port 8000"
+  },
+  "dependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "@vitejs/plugin-react": "^1.3.0",
+    "typescript": "^4.4.0",
+    "vite": "^2.9.0"
+  },
+  "keywords": [
+    "task",
+    "management",
+    "frontend",
+    "typescript",
+    "react"
+  ],
+  "author": "",
+  "license": "MIT"
+}
