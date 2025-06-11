@@ -196,7 +196,7 @@ docker-run:
 install-tools:
 	@echo "$(BLUE)🛠️  Installing development tools...$(NC)"
 	$(GOCMD) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	$(GOCMD) install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+	$(GOCMD) install github.com/securego/gosec/v2/cmd/gosec@latest
 	$(GOCMD) install github.com/swaggo/swag/cmd/swag@latest
 	@echo "$(GREEN)✅ Tools installed$(NC)"
 
